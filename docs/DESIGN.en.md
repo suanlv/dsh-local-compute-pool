@@ -84,6 +84,39 @@ real choice is "spread" versus "always the first one". A legacy `round-robin` in
 * **It is not a general-purpose load balancer.** The decision unit is a subagent, not a request;
   at request level it only re-affirms an existing assignment.
 
+## Distribution: why a plain directory bundle and not an npm package
+
+This repository is a **plain directory bundle**: clone it, point `plugin_manager` at the absolute path
+of `plugin\`, and you are done. Installation is two steps with **no npm, no build step and no
+dependencies** (`plugin/lib/` uses only the Node standard library).
+
+The `dsh` installer actually accepts three kinds of target — a registry name, an absolute path, and a
+git/tarball address — so "could it be on npm" is not a technical question but a trade-off:
+
+| | Plain directory bundle (current) | Published to npm |
+| --- | --- | --- |
+| What a user does | `git clone`, then point at the path | Type the package name |
+| What the maintainer does | `git push` | **Bump the version and republish on every change** |
+| Extra prerequisites | none | A registry account, a login, and publishing now enforces two-factor auth |
+| What ships | The whole repository (docs and tests included) | Only what `files[]` names |
+
+The reason for the first column is straightforward: this plugin is a small tool for its author's own
+machines, not a library thousands of people install. Paying a permanent "republish on every change"
+cost to save a user one `git clone` is a bad trade. And the plain bundle hands the reader the **whole
+repository** — tests, verification log and design notes included — so they can run it themselves
+before deciding to trust it.
+
+The cost is explicit: you **cannot** install it by package name
+(`install_bundle target: dsh-local-compute-pool`), and you **cannot** install it straight from
+`github:owner/repo` — because `dsh` reads `dsh.bundle.patch` from the package's own `package.json`, and
+this repository keeps its package in the `plugin/` subdirectory with no `package.json` at the root.
+
+If it ever does go to npm: the `plugin/` directory is already a publishable package (its `files[]` is
+trimmed correctly — `pnpm pack --dry-run` includes only `index.js`, `client.js`, `lib/`, `locale/`,
+`cordis.patch.yml`, `icon.svg`, `package.json` and the two READMEs). That step would need
+`private: true` removed, plus `keywords` and `publishConfig`, and then
+`pnpm publish --access public`.
+
 ## Known implementation trade-offs
 
 * **Two queue implementations** (the endpoint queue and the task-budget queue) are the same algorithm

@@ -70,6 +70,34 @@ DSH 没有请求级并发控制，所以两个 subagent 指向同一台机器时
 * **不做跨机协作**。没有会话迁移、没有跨机缓存共享、没有分布式状态。每个子代理的世界就是它黏住的那台机器。
 * **不是通用负载均衡**。决策粒度是"子代理"，不是"请求"；请求级只会重新贴合既有分配。
 
+## 分发方式：为什么是裸目录束，而不是 npm 包
+
+这个仓库是**裸目录束**：克隆下来，用 `plugin_manager` 指向 `plugin\` 的绝对路径就行。
+安装只有两步，**不需要 npm、不需要构建、没有任何依赖**（`plugin/lib/` 只用 Node 标准库）。
+
+`dsh` 的安装器其实同时支持三种目标——registry 包名、绝对路径、git/tarball 地址——
+所以"能不能上 npm"不是技术问题，而是一次取舍：
+
+| | 裸目录束（现状） | 发布到 npm |
+| --- | --- | --- |
+| 使用者要做什么 | `git clone` + 指路径 | 只填包名 |
+| 维护者要做什么 | `git push` | **每次改动都要改版本号再发布一次** |
+| 额外前提 | 无 | 注册 registry 账号、登录，且现在发布强制双重验证 |
+| 包体 | 仓库全貌（含文档与测试） | 只有 `files[]` 里的运行所需文件 |
+
+选前者的理由很直接：这个插件是给自己机器用的小工具，不是要被成千上万人安装的库。
+用"每次改动都要重新发布"的持续成本，去换使用者少敲一次 `git clone`，不划算。
+而且裸目录束让使用者拿到的是**完整仓库**——测试、验证记录、设计文档都在，可以自己跑一遍再决定信不信。
+
+代价要说清楚：**不能**用 `install_bundle target: dsh-local-compute-pool` 这种包名安装，
+也**不能**用 `github:owner/repo` 直装——因为 `dsh` 读的是包内 `package.json` 的 `dsh.bundle.patch`，
+而本仓库的包在 `plugin/` 子目录里，仓库根没有 `package.json`。
+
+将来若真要上 npm：`plugin/` 目录本身就是可发布的包（`files[]` 已经裁剪正确，
+`pnpm pack --dry-run` 只会带上 `index.js` / `client.js` / `lib/` / `locale/` / `cordis.patch.yml` /
+`icon.svg` / `package.json` / 两份 README）。届时需要删掉 `private: true`、补 `keywords` 与
+`publishConfig`，然后 `pnpm publish --access public`。
+
 ## 已知的实现取舍
 
 * **两份队列实现**（端点队列与任务预算队列）是同一个算法的两次实现，约 90 行重复。

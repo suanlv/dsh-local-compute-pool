@@ -69,6 +69,8 @@ kind: "package-bundle"
 
 ## 安装
 
+只有两步，**不需要 npm、不需要构建、没有任何依赖**。这个仓库是裸目录束，克隆下来就是插件运行所需的一切。
+
 克隆本仓库：
 
 ```
@@ -81,6 +83,9 @@ git clone https://github.com/suanlv/dsh-local-compute-pool.git
 plugin_manager  action: install_bundle
                 target: <克隆下来的仓库目录>\plugin
 ```
+
+> 有意**不发布到 npm**：那要额外注册 registry 账号，而且每次改动都得改版本号重新发布一次，
+> 换来的只是替使用者省下一次 `git clone`。理由见 [docs/DESIGN.md](docs/DESIGN.md)。
 
 安装后：
 

@@ -3,6 +3,21 @@
 版本号跟随 `plugin/package.json`。每次改动都会：跑完三个测试文件、更新 `plugin/README*.md` 的字段说明、
 并把验证记录追加到 [plugin/VERIFICATION.md](plugin/VERIFICATION.md)。
 
+> 文档与仓库结构的改动不单独占版本号。例如仓库页面的多语言结构（英文为主 + `README.zh.md`、
+> 官方 `kind` 取值、`docs/DESIGN.en.md`）与"为什么是裸目录束而不是 npm 包"的说明，
+> 都记在下面的 0.7.0 之后，因为 `plugin/` 里的代码没有变化。
+
+## 文档与仓库结构（0.7.0 之后，未改变版本号）
+
+* 仓库页面改成官方风格的多语言结构：`README.md` 英文（GitHub 落地页）+ `README.zh.md` 中文，内容对等；
+  四份 README 统一加 YAML frontmatter 与语言切换行；`plugin/README*.md` 与 `docs/DESIGN*.md` 互为镜像。
+* frontmatter 的 `kind` 采用官方取值：根 README 用 `package-bundle`（与 `dsh-experimental-voice-input-bundle`
+  同类），`plugin/` 与 `docs/` 的说明用 `package-reference`（与 `dsh-schedule` 同类）。
+* 新增 `docs/DESIGN.en.md` 英文设计说明。
+* 新增「分发方式」一节（两份 DESIGN），说明为什么做裸目录束而不发布 npm；
+  安装章节开头也写明"两步、不需要 npm、不需要构建"。
+* 修复 `plugin/README*.md` 指向私有工作区 `NAMING.md` 的死链（改为指向本文件）。
+
 ## 0.7.0
 
 设置面板观感对齐官方插件：

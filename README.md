@@ -81,6 +81,9 @@ The settings page is built around two lists with clearly separate jobs:
 
 ## Install
 
+Two steps, and that is all: **no npm, no build step, no dependencies.** This repository is a plain
+directory bundle — cloning it gives you everything the plugin needs.
+
 Clone this repository:
 
 ```
@@ -93,6 +96,9 @@ Then install the `plugin` directory by its **absolute path**:
 plugin_manager  action: install_bundle
                 target: <cloned repo>\plugin
 ```
+
+> Not on npm, on purpose: publishing would add a registry account and a republish-on-every-change
+> ritual, in exchange for saving one `git clone`. See [docs/DESIGN.en.md](docs/DESIGN.en.md).
 
 Afterwards:
 
