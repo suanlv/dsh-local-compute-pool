@@ -1,7 +1,14 @@
+---
+description: "本地算力池为什么这样设计，以及它刻意不做什么。"
+kind: "package-reference"
+---
+
 # 设计意图与边界
 
 这份文档解释**为什么是这样设计的**，以及**它刻意不做什么**。想知道怎么用，看
-[../README.md](../README.md)；想知道每个字段，看 [../plugin/README.md](../plugin/README.md)。
+[../README.zh.md](../README.zh.md)；想知道每个字段，看 [../plugin/README.md](../plugin/README.md)。
+
+[English](DESIGN.en.md) | 中文
 
 ## 一句话
 

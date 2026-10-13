@@ -1,6 +1,6 @@
 ---
 description: "把多个本地推理端点并成一个算力池：子代理按负载铺开、每端点并发闸门与排队、失败冷却换机。完整的使用与字段说明。"
-kind: "plugin-readme"
+kind: "package-reference"
 ---
 
 # 本地算力池 (dsh-local-compute-pool)

@@ -1,6 +1,6 @@
 ---
 description: "DSH plugin: pool several local inference endpoints into one compute pool and spread delegated subagents across them, with per-endpoint admission control."
-kind: "plugin-bundle"
+kind: "package-bundle"
 ---
 
 # Local compute pool
@@ -182,5 +182,5 @@ existing at all, and the easiest thing to misdiagnose when something looks wrong
 This plugin was originally written for its author's own development machine (two local endpoints plus
 a cloud main agent) and only reached its current shape after several rounds of correction. The naming
 decisions, per-version verification log and design trade-offs live in
-[CHANGELOG.md](CHANGELOG.md) and [docs/DESIGN.md](docs/DESIGN.md);
+[CHANGELOG.md](CHANGELOG.md) and [docs/DESIGN.en.md](docs/DESIGN.en.md);
 [plugin/VERIFICATION.md](plugin/VERIFICATION.md) records what was verified and what was not.

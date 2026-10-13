@@ -1,6 +1,6 @@
 ---
 description: "Pool several local inference endpoints into one: load-aware placement, per-endpoint admission control, failure cooldown and failover. Full usage and field reference."
-kind: "plugin-readme"
+kind: "package-reference"
 ---
 
 # Local compute pool (dsh-local-compute-pool)

@@ -1,6 +1,6 @@
 ---
 description: "DSH 插件：把多个本地推理端点并成一个算力池，让被委派的子代理按负载铺开到各台机器上，并对每个端点做并发准入控制。"
-kind: "plugin-bundle"
+kind: "package-bundle"
 ---
 
 # 本地算力池
