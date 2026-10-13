@@ -1,0 +1,21 @@
+# Dependencies are never committed: the install happens inside the DSH profile,
+# and this package has none of its own.
+node_modules/
+
+# Logs and scratch files.
+*.log
+*.tmp
+
+# Editor and OS noise.
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Private workspace files that must never enter this repository, even if someone
+# copies the repo into a shared directory.
+小说_*.md
+末站之后.md
+NAMING.md
+ref/
+tools/asar.mjs

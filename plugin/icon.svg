@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="Local compute pool">
+  <rect x="4" y="9" width="17" height="30" rx="4" fill="#2F6FEB"/>
+  <rect x="27" y="9" width="17" height="30" rx="4" fill="#2F6FEB" opacity="0.5"/>
+  <rect x="8" y="15" width="9" height="3" rx="1.5" fill="#FFFFFF" opacity="0.95"/>
+  <rect x="8" y="22" width="9" height="3" rx="1.5" fill="#FFFFFF" opacity="0.7"/>
+  <rect x="31" y="15" width="9" height="3" rx="1.5" fill="#FFFFFF" opacity="0.95"/>
+  <rect x="31" y="22" width="9" height="3" rx="1.5" fill="#FFFFFF" opacity="0.7"/>
+  <path d="M21 24h6" stroke="#2F6FEB" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="24" cy="24" r="2.5" fill="#2F6FEB"/>
+</svg>

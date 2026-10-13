@@ -1,0 +1,8 @@
+# Keep every text file LF in the repository regardless of the author's platform.
+# Without this, a Windows checkout rewrites line endings (git warns "LF will be
+# replaced by CRLF"), which produces whole-file diffs on a one-line change.
+* text=auto eol=lf
+
+# Binary assets must never be normalized.
+*.svg text
+*.png binary

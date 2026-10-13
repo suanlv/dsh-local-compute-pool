@@ -1,0 +1,73 @@
+# Bundle patch for 「本地算力池」 (Local compute pool).
+#
+# The row below mounts ./index.js (anchored beside this file) and carries the
+# tunable configuration. Everything below is also editable from the UI: open the
+# bundle card under 插件 / Plugins → 本地算力池.
+#
+# Endpoints are user-managed: add or remove rows on that page and pick each
+# `provider` from those already configured for @deepseek-ai/dsh-llm-pi-ai
+# (`local`, `local-strata`, …), with `auto` or an exact model per endpoint.
+# Saving writes a profile override, so later plugin updates never overwrite
+# what you configured. An empty list is valid — the plugin then routes nothing
+# and every delegated child keeps the route the harness resolved.
+- insert:
+    - id: local-compute-pool
+      name: './index.js'
+      config:
+        # Read for compatibility only: the Plugins card owns the on/off switch.
+        enabled: true
+        # 'children' routes only delegated subagents; 'all' also moves the main
+        # agent's whole conversation onto a local model.
+        applyTo: children
+        # least-busy | fixed. 'round-robin' from older configs maps to least-busy.
+        strategy: least-busy
+        # NOTE: stickiness is not configurable — the pool always keeps one
+        # subagent on the machine it was placed on (stable prompt cache, stable
+        # tool-call dialect). An old `sticky:` key here is ignored.
+        # A route that already names one of these providers is left alone (explicit wins).
+        respectExplicitRoute: true
+        # Skip endpoints whose provider/model is not registered in the live llm catalog.
+        requireRegisteredRoute: true
+        # WHITELIST (list 1): only tasks whose own model runs on one of these
+        # providers hand their subagents to the local pool, and each entry's
+        # `concurrency` is how many local subagents one such task may run at
+        # once — written into that task's prompt and enforced by the pool.
+        # Empty = no whitelist: every delegated child is routed (per applyTo).
+        #   - provider: deepseek-account
+        #     concurrency: 2
+        triggers: []
+        # SUBAGENT POOL (list 2): which provider/model pairs serve delegated
+        # children, and how many requests each endpoint handles at once.
+        # SHIPPED EMPTY on purpose: an endpoint that points at a machine this
+        # install cannot reach would only fail. Add your own rows in the UI —
+        # 插件 / Plugins → 本地算力池 → 子代理模型池 → ＋ 添加本地端点.
+        # An empty list is a valid state: the plugin routes nothing and every
+        # delegated child keeps the route the harness resolved.
+        #   - id: machine-a
+        #     provider: local            # a configured pi-ai provider id
+        #     model: auto                # or an exact model id
+        #     concurrency: 1             # requests this machine serves at once
+        #     enabled: true
+        #     label: 本机 (:8888)         # optional, shown by local_pool
+        #     baseURL: http://127.0.0.1:8888/v1   # optional, only for probe: true
+        #     apiKeyEnv: LOCAL_API_KEY            # optional, only for probe: true
+        endpoints: []
+        queue:
+          # Requests waiting for a free slot on one endpoint.
+          maxWaiting: 32
+          # Give up after this long and fail the step instead of hanging forever.
+          timeoutMs: 600000
+        health:
+          # Consecutive failures before an endpoint is parked.
+          failureThreshold: 2
+          # How long a parked endpoint stays out of rotation.
+          cooldownMs: 120000
+          # Failures that say nothing about endpoint health.
+          ignoreCodes:
+            - ABORTED
+            - CONTEXT_WINDOW_EXCEEDED
+            - IMAGE_OFFLOAD_REQUIRED
+            - EMPTY_RESPONSE
+        tool:
+          enabled: true
+          name: local_pool

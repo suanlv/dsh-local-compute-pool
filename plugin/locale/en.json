@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Local compute pool",
+    "description": "Pool several local inference endpoints into one: spread delegated subagents across them, gate and queue per endpoint, park a failing one, and keep the parent route when every local endpoint is down."
+  }
+}

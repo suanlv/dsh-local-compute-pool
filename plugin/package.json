@@ -1,0 +1,42 @@
+{
+  "name": "dsh-local-compute-pool",
+  "version": "0.7.0",
+  "private": true,
+  "description": "Pool several local inference endpoints into one: spread delegated subagents across them, gate and queue per endpoint, park a failing one, and keep the parent route when every local endpoint is down.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/suanlv/dsh-local-compute-pool.git"
+  },
+  "homepage": "https://github.com/suanlv/dsh-local-compute-pool#readme",
+  "bugs": {
+    "url": "https://github.com/suanlv/dsh-local-compute-pool/issues"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "icon.svg",
+    "lib",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "README.md",
+    "README.en.md"
+  ],
+  "icon": "./icon.svg",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true
+    }
+  }
+}
