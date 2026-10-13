@@ -1,4 +1,11 @@
+---
+description: "Pool several local inference endpoints into one: load-aware placement, per-endpoint admission control, failure cooldown and failover. Full usage and field reference."
+kind: "plugin-readme"
+---
+
 # Local compute pool (dsh-local-compute-pool)
+
+English | [中文](README.md)
 
 A DeepSeek Harness host plugin that **spreads delegated subagent model calls across several
 local inference endpoints**, with per-endpoint admission control, so two machines' compute
@@ -118,8 +125,8 @@ node plugin\test\client-page.test.mjs   # 21 (browser half)
 ```
 
 The bundle was renamed from "Better Local Support" / `dsh-better-local-support` to
-"Local compute pool" / `dsh-local-compute-pool` on 2026-10-12 (rationale and 20 other
-candidates: [NAMING.md](../NAMING.md)). The rename also fixed a latent bug: the card title
+"Local compute pool" / `dsh-local-compute-pool` on 2026-10-12 (version history:
+[CHANGELOG.md](../CHANGELOG.md)). The rename also fixed a latent bug: the card title
 now really shows the localized string (`locale/*.json` must use the `{"meta": {"title": …}}`
 envelope — that is the only layer the harness reads).
 

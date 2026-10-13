@@ -1,4 +1,11 @@
+---
+description: "把多个本地推理端点并成一个算力池：子代理按负载铺开、每端点并发闸门与排队、失败冷却换机。完整的使用与字段说明。"
+kind: "plugin-readme"
+---
+
 # 本地算力池 (dsh-local-compute-pool)
+
+[English](README.en.md) | 中文
 
 一个 DeepSeek Harness 插件：**把子代理（subagent）的模型调用自动分配到多台机器的本地推理服务上**，
 并按每台机器的并发能力排队，让两台电脑的算力真正叠加在同一个任务上。
@@ -268,8 +275,8 @@ node plugin\test\client-page.test.mjs   # 21（浏览器半边）
 状态工具输出、以及设置页的注册键与读写路径（含"改 provider 立即换模型列表"与可编辑名称）。
 
 > 改名记录：本插件原名「更好的本地推理支持 / `dsh-better-local-support`」，
-> 2026-10-12 起更名为「本地算力池 / `dsh-local-compute-pool`」（理由与 20 个候选见仓库根目录的
-> [NAMING.md](../NAMING.md)）。改名同时修好了一个此前一直没生效的问题：卡片标题现在真的会显示
+> 2026-10-12 起更名为「本地算力池 / `dsh-local-compute-pool`」（版本沿革见仓库根的
+> [CHANGELOG.md](../CHANGELOG.md)）。改名同时修好了一个此前一直没生效的问题：卡片标题现在真的会显示
 > 中文（`locale/*.json` 必须写成 `{"meta": {"title": …}}` 信封，官方加载器只读这一层）。
 
 `plugin/lib/` 只依赖 Node 标准库，没有第三方依赖，也不需要构建步骤。

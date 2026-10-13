@@ -1,150 +1,186 @@
-# 本地算力池 · Local compute pool
+---
+description: "DSH plugin: pool several local inference endpoints into one compute pool and spread delegated subagents across them, with per-endpoint admission control."
+kind: "plugin-bundle"
+---
 
-一个 **DeepSeek Harness 插件**：把多个本地推理端点并成一个池，让被委派的子代理（subagent）按负载铺开到不同机器上，
-每个端点有独立的并发闸门与排队，失败自动冷却换机；所有本地端点都不可用时，子代理保持原线路继续跑。
+# Local compute pool
 
-* 包名：`dsh-local-compute-pool` ｜ 卡片名：**本地算力池** / *Local compute pool*
-* 分发形态：**裸目录束**（不是 npm 包）——克隆本仓库后按下面的绝对路径方式安装
-* 许可：MIT
+English | [中文](README.zh.md)
+
+A **DeepSeek Harness plugin** that pools several local inference endpoints into one compute pool:
+delegated subagents are spread across the machines by load, every endpoint has its own concurrency
+gate and queue, a failing endpoint is parked and the next attempt fails over — and when no local
+endpoint is usable, children keep the route the harness resolved.
+
+* Package: `dsh-local-compute-pool` · Card title: **Local compute pool** / 本地算力池
+* Distribution: a **plain directory bundle** (not an npm package) — clone this repository and install
+  it by absolute path, as described below
+* License: MIT
 
 ---
 
-## 它解决什么
+## What it solves
 
-本地部署的模型有三个现实约束，这个插件的每个机制都对应其中之一：
+A locally served model has three hard limits, and every mechanism here maps to one of them:
 
-| 现实约束 | 本插件的做法 |
+| Reality of local inference | What the plugin does |
 | --- | --- |
-| 显存/内存有限，通常一次只能服务一个会话 | 每个端点一个**并发闸门**（默认 1），同时最多放行 `concurrency` 个请求，其余排队（有上限、有超时） |
-| 上下文缓存能力弱 | 每个子代理**终身黏在**一台机器上，前缀缓存与工具调用方言保持稳定 |
-| 不擅长多发并行 | `least-busy` 策略把子代理铺开到不同机器，而不是堆在一台后面排队 |
+| VRAM/RAM is limited — usually one conversation at a time | A per-endpoint **concurrency gate** (default 1): at most `concurrency` requests at once, the rest queue (with a depth limit and a timeout) |
+| Context caching is weak | Each subagent is **pinned to one machine for its whole life**, so the prompt prefix and the tool-call dialect stay stable |
+| Parallel requests are handled poorly | The `least-busy` strategy spreads subagents across machines instead of stacking them behind one |
 
-核心不是"跑得更快"，而是**让"多派几个子代理"这件事在本地模型上从不可用变成可用**：本地服务收到两个并发请求时
-往往不是各慢一半，而是双双超时或把显存打爆。
-
----
-
-## 你可能正卡在这里
-
-试想一下：你手上有好几张性能不错的显卡，在 [Strata](https://gigazine.net/gsc_news/en/20261005-strata-local-ai)
-或 [NInfer](https://github.com/natpate/ninfer-windows) 这类框架下跑 LLM，速度和质量都还算满意。
-你不缺电脑——但家用主板往往只有两条 PCIe 插槽，你没法把它们全塞进同一台机器，也就没法让它们**同时**为一个任务干活。
-
-瓶颈从来不是算力不够，而是这些算力分散在几台电脑里、各自为战。
-
-**本地算力池就是为解决这件事而写的。** 它让不同电脑上的模型以「子代理」的身份参与同一个任务：
-主代理把工作拆开，插件把拆出来的子代理分配到各台机器上并行执行，再汇总结果。
-
-我自己就是这么用的：一台 5090 和一台双卡 4080S，两边都能以约 100 tok/s 跑 Qwen 3.8 Flash Next。
-启用这个插件后，同一个任务里两个子代理分别落在两台机器上同时推进，**合计有效吞吐约 200 tok/s**——
-相当于把两台电脑拼成了一台你没插槽去拼的机器。
-
-> 需要说清楚的是：这不是让**单次生成**变快（自回归解码没法把两路的 token 相加），
-> 而是让**同一个任务里的多个子代理真正并行**，总吞吐随之叠加。
-
-## 设置页里那两个列表
-
-插件设置页的核心就是两个列表，分工很明确：
-
-1. **触发白名单**——标记**哪些模型允许启用本插件**。只有任务自身跑在白名单里的 provider 上时，
-   它派生的子代理才会交给本地池；没勾选的任务完全不受影响，子代理保持原有线路。
-2. **子代理模型池**——列出**哪些机器/端点愿意提供算力**。每个端点单独设置并发数，
-   插件按负载把子代理铺开到这些端点上。
+The point is not "going faster" — it is **turning "start several subagents" from unusable into usable**
+on local models: a local server that receives two concurrent requests often does not run each at half
+speed, it times out on both or blows up its VRAM.
 
 ---
 
-## 前置条件
+## You may be stuck exactly here
 
-* DeepSeek Harness 桌面端（本插件在 `0.2.0-rc.2` 上开发与验证）。
-* 已经在 `llm-pi-ai` 里配好**至少一个**本地 OpenAI 兼容 provider（例如 `local` → `http://127.0.0.1:8888/v1`）。
-  插件不自己发 HTTP、不新增 provider，只负责"选谁 + 排队"。
+Picture this: you own a few good GPUs. Running an LLM under a framework such as
+[Strata](https://gigazine.net/gsc_news/en/20261005-strata-local-ai) or
+[NInfer](https://github.com/natpate/ninfer-windows) gives you speed and quality you are happy with.
+You are not short of computers — but a consumer motherboard usually has only two PCIe slots, so you
+cannot fit them all into one machine, and therefore cannot make them work on one task **at the same
+time**.
 
-## 安装
+The bottleneck was never raw compute. It is that the compute sits in several separate computers,
+each fighting alone.
 
-克隆本仓库：
+**Local compute pool was written for exactly that.** It lets models on different computers take part
+in the same task as delegated subagents: the main agent splits the work, the plugin places the
+resulting subagents on the available machines to run in parallel, and the results are gathered back.
+
+This is how I use it: one machine with a 5090 and one with dual 4080S cards, each running Qwen 3.8
+Flash Next at roughly 100 tok/s. With this plugin, two subagents of the same task land on the two
+machines and proceed at once — **about 200 tok/s of combined effective throughput**, as if the two
+computers had been soldered into the single machine your slots could not hold.
+
+> To be precise: this does not make a **single generation** faster — autoregressive decoding cannot
+> add two streams of tokens together. It makes **several subagents inside one task truly parallel**,
+> so total throughput stacks.
+
+## The two lists on the settings page
+
+The settings page is built around two lists with clearly separate jobs:
+
+1. **Trigger whitelist** — marks **which models may enable this plugin**. Only when a task's own model
+   runs on a whitelisted provider are its subagents handed to the local pool; tasks that are not ticked
+   are untouched and keep the route the harness resolved.
+2. **Subagent model pool** — lists **which machines/endpoints offer compute**. Each endpoint gets its
+   own concurrency, and the plugin spreads subagents across them by load.
+
+---
+
+## Requirements
+
+* DeepSeek Harness desktop (developed and verified on `0.2.0-rc.2`).
+* At least one local OpenAI-compatible provider already configured in `llm-pi-ai` (for example
+  `local` → `http://127.0.0.1:8888/v1`). The plugin sends no HTTP of its own and adds no provider:
+  it only decides *who* and queues.
+
+## Install
+
+Clone this repository:
 
 ```
 git clone https://github.com/suanlv/dsh-local-compute-pool.git
 ```
 
-然后用插件管理器安装 `plugin` 目录的**绝对路径**：
+Then install the `plugin` directory by its **absolute path**:
 
 ```
 plugin_manager  action: install_bundle
-                target: <克隆下来的仓库目录>\plugin
+                target: <cloned repo>\plugin
 ```
 
-安装后：
+Afterwards:
 
-* 包会加入 profile 的 `dsh.profile.bundles`，本仓库 `plugin/cordis.patch.yml` 作为一层 patch 插入插件行；
-* **新装的 bundle 可以热生效**；若提示 `restart-required`，重启 Harness 桌面端；
-* 之后改 `cordis.patch.yml` 的 `config` 会被 HMR 实时重载；**改 JS（`index.js` / `lib/*` / `client.js`）需要重启**
-  （浏览器半边刷新页面即可）。
+* the package joins the profile's `dsh.profile.bundles`, and this repository's `plugin/cordis.patch.yml`
+  is inserted as one patch layer for the plugin row;
+* a freshly installed bundle activates live; if it reports `restart-required`, restart the desktop app;
+* later edits to `cordis.patch.yml`'s `config` are reloaded by HMR, while **editing JavaScript
+  (`index.js` / `lib/*` / `client.js`) needs a restart** (the browser half only needs a page refresh).
 
-卸载：`plugin_manager action: remove_bundle target: dsh-local-compute-pool`。
+Remove it with `plugin_manager action: remove_bundle target: dsh-local-compute-pool`.
 
-## 第一次使用
+## First run
 
-1. **添加端点**：侧栏 **插件(Plugins)** → 卡片 **本地算力池** → 「子代理模型池」→「＋ 添加本地端点」，
-   `provider` 从实时目录里选，`模型` 选 `auto`（该 provider 广告的第一个模型）或精确 id，
-   `并发` 填该机器能同时服务几个请求（单会话本地服务填 1）。
-   **出厂端点列表是空的**：指向别人机器上不存在服务的默认值只会失败，所以不预设。
-2. **决定谁能用本地算力**：「触发白名单」里勾选 provider——只有**任务自身的模型**跑在这些 provider 上时，
-   它派生的子代理才会落到本地池；白名单为空则表示"不限制"。每行旁边的数字是该任务的子代理并行上限，
-   它会写进该任务的提示词，并且在网关处**真实限流**（跨机器也算同一个任务的账）。
-3. **验证**：一条消息里起两个 subagent，它们应当落到不同端点上；或在模型里调用 `local_pool` 工具查看
-   每台机器在跑几个、排队几个、哪台冷却中、每个任务持有多少子代理预算。
+1. **Add endpoints**: sidebar **Plugins** → card **Local compute pool** → *Subagent model pool* →
+   *+ Add a local endpoint*. Pick the `provider` from the live directory, choose `auto` (the first
+   model that provider advertises) or an exact id, and set `concurrency` to how many requests that
+   machine serves at once (1 for a single-session local server).
+   **The shipped endpoint list is empty**: a default pointing at a service that does not exist on
+   someone else's machine can only fail, so none is preset.
+2. **Decide who may use local compute**: tick providers in the *Trigger whitelist*. Only tasks whose
+   own model runs on those providers hand their subagents to the local pool; an empty whitelist means
+   "no restriction". The number beside each entry is that task's subagent cap: it is written into the
+   task's prompt and **enforced** at the stream gate (counted per task, across machines).
+3. **Verify**: start two subagents in one message — they should land on different endpoints. Or have
+   the model call the `local_pool` tool to see in-flight / queued / parked counts per machine, how
+   many slots a task holds for itself, and each task's subagent budget.
 
-## 已知边界（请先读这一节）
+## Known boundaries (read this before filing an issue)
 
-* **只管子代理**。默认 `applyTo: children`：主代理保持自己的模型。改成 `all` 会让主代理**整段对话**落到本地模型，
-  工具调用能力取决于那个模型本身。
-* **不自己发 HTTP，也不做重试**。请求走你在 `llm-pi-ai` 里配好的 provider；重试由 `dsh-llm-retry` 负责，
-  插件只是在每次重试经过时重新选端点（这正是失败后能换机器的原因）。
-* **它不认识"设备"，只认识 provider id**。当前所有端点都是 `127.0.0.1` 形态；远端那台靠端口转发/隧道到达。
-  插件**不区分"同一台机器的两个端口"与"两台机器"**，也没有设备发现、远端传输、集群成员或认证。
-* **不做跨机协作**：没有会话迁移、没有跨机缓存共享、没有分布式状态。每个子代理的世界就是它黏住的那台机器。
-* **不做通用负载均衡**：决策粒度是"子代理"，不是"请求"。
-* `concurrency` 是人工声明值，插件无法探知服务端真实并发能力；填大了会把本地服务压垮。
+* **Subagents only.** With the default `applyTo: children` the main agent keeps its own model. Setting
+  it to `all` moves the main agent's **whole conversation** onto a local model, and tool calling then
+  depends on that model.
+* **It sends no HTTP and does not retry.** Requests go through the provider you configured in
+  `llm-pi-ai`; retries belong to `dsh-llm-retry`. The plugin simply re-picks an endpoint each time a
+  retry passes through `agent/request` — which is exactly why a failure can move to another machine.
+* **It does not know about "devices", only provider ids.** Every endpoint is a `127.0.0.1`-style
+  address; a remote machine is reached through port forwarding or a tunnel. It **cannot tell
+  "two ports on one machine" from "two machines"**, and has no device discovery, remote transport,
+  cluster membership or authentication.
+* **No cross-machine cooperation**: no session migration, no shared cache, no distributed state. Each
+  subagent's world is the machine it is pinned to.
+* **Not a general-purpose load balancer**: the decision unit is a subagent, not a request.
+* `concurrency` is a value you declare; the plugin cannot probe what the server really supports.
+  Setting it too high will crush the local server.
 
-## 配置
+## Configuration
 
-完整字段表见 [plugin/README.md](plugin/README.md)（中文）与 [plugin/README.en.md](plugin/README.en.md)（English）。
-出厂 `plugin/cordis.patch.yml` 里每一项都有注释。
+The full field reference is in [plugin/README.md](plugin/README.md) (Chinese) and
+[plugin/README.en.md](plugin/README.en.md) (English). Every option in the shipped
+`plugin/cordis.patch.yml` carries a comment.
 
-## 测试
+## Tests
 
-`plugin/lib/` 只依赖 Node 标准库，没有依赖、没有构建步骤。
+`plugin/lib/` uses only the Node standard library: no dependencies, no build step.
 
 ```powershell
-node plugin\test\pool.test.mjs          # 23：端点池：选择/黏性/排队/冷却/任务占位
-node plugin\test\plugin.test.mjs        # 25：宿主半边接线：路由改写、并发闸门、白名单预算、工具输出
-node plugin\test\client-page.test.mjs   # 21：浏览器半边：设置页渲染、开关控件、写操作
+node plugin\test\pool.test.mjs          # 23: endpoint pool — placement, stickiness, queueing, cooldowns, task reservations
+node plugin\test\plugin.test.mjs        # 25: host wiring — route rewrite, admission gate, whitelist budget, tool output
+node plugin\test\client-page.test.mjs   # 21: browser half — settings page rendering, switch controls, writes
 ```
 
-装后自检（模拟宿主解析一遍：登记 / 入口 / `Config` / 客户端标识符 / locale 信封 / 补丁行 id / 工具注册）：
+Post-install self check (replays the profile's resolution once: registration, entry, `Config`, client
+identifiers, locale envelope, patch row id, tool registration):
 
 ```powershell
-# 建议用宿主自己的运行时跑，这样 app.asar 里的模块才解析得到
+# preferred: run it with the host's own runtime so app.asar resolves
 $env:ELECTRON_RUN_AS_NODE='1'
-& "<安装目录>\DeepSeek Harness.exe" tools\verify-install.mjs
+& "<install>\DeepSeek Harness.exe" tools\verify-install.mjs
 
-# 纯 node 也能跑，但 Config 那条会如实报"读不了 app.asar"
+# plain node works too, but the Config check then reports that it cannot read app.asar
 node tools\verify-install.mjs
 ```
 
-`tools/probe-asar-import.mjs` 用来证明"Electron 的 Node 能 import app.asar 里的模块、纯 Node 不能"——
-这是设置页能否出现的前提条件，也是本插件排错时最容易误判的一点。
+`tools/probe-asar-import.mjs` demonstrates why that distinction matters: Electron's Node can
+`import()` a module inside `app.asar`, plain Node cannot. It is the precondition for the settings page
+existing at all, and the easiest thing to misdiagnose when something looks wrong.
 
-## 开发说明
+## Development notes
 
-* 宿主半边（`plugin/index.js`、`plugin/lib/*`）改完**必须整代重启**：模块按 URL 缓存，只改文件名会造成
-  "新入口 + 旧 lib"的混合世代。
-* 浏览器半边（`plugin/client.js`）是静态文件，刷新页面即可换新。
-* 用 `plugin_manager` 安装/卸载，不要手改 profile 的 `package.json`。
+* The host half (`plugin/index.js`, `plugin/lib/*`) **must be restarted as a whole generation**:
+  modules are cached by URL, so renaming just the entry file produces a "new entry + old lib" mix.
+* The browser half (`plugin/client.js`) is a static file — a page refresh is enough.
+* Install and remove through `plugin_manager`; do not hand-edit the profile's `package.json`.
 
-## 出处
+## Where it came from
 
-本插件最初为作者自己的一台开发机而写（两台本地端点 + 一个云端主代理），
-经过多轮修正才形成现在的形态。开发过程中的命名决策、逐版验证记录与设计取舍
-保存在作者的工作区，不在本仓库内。
+This plugin was originally written for its author's own development machine (two local endpoints plus
+a cloud main agent) and only reached its current shape after several rounds of correction. The naming
+decisions, per-version verification log and design trade-offs live in
+[CHANGELOG.md](CHANGELOG.md) and [docs/DESIGN.md](docs/DESIGN.md);
+[plugin/VERIFICATION.md](plugin/VERIFICATION.md) records what was verified and what was not.
